@@ -12,20 +12,30 @@ class FeatureEngineeringV1:
 			'wind_speed': MinMaxScaler(),
 			'wind_dir'  : MinMaxScaler(),
 			'lat_lon'   : MinMaxScaler(feature_range=(-1, 1)),
-			'altitude'  : MinMaxScaler()
+			'altitude'  : MinMaxScaler(),
+			'target': MinMaxScaler(),
 		}
 		self.fitted = False
+	
+	def common_preprocessing(self, df):
+		df = df.dropna()
+		df = df.drop_duplicates().reset_index(drop=True)
+		
+		return df
+	
 	
 	def normalize_features(self, df):
 		wind_speed_columns = df.columns[df.columns.str.startswith('wind_speed')]
 		wind_dir_columns = df.columns[df.columns.str.startswith('wind_dir')]
 		lat_lon_columns = ['Ac_Lat', 'Ac_Lon']
 		altitude_columns = ['Ac_feet']
+		target_columns = ['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet']
 		
 		df[wind_speed_columns] = self.scalers['wind_speed'].fit_transform(df[wind_speed_columns])
 		df[wind_dir_columns] = self.scalers['wind_dir'].fit_transform(df[wind_dir_columns])
 		df[lat_lon_columns] = self.scalers['lat_lon'].fit_transform(df[lat_lon_columns])
 		df[altitude_columns] = self.scalers['altitude'].fit_transform(df[altitude_columns])
+		df[target_columns] = self.scalers['target'].fit_transform(df[target_columns])
 		
 		self.fitted = True
 		return df
@@ -45,6 +55,7 @@ class FeatureEngineeringV1:
 	
 	def process_data(self, csv_path):
 		df = pd.read_csv(csv_path)
+		df = self.common_preprocessing(df)
 		df = self.normalize_features(df)
 		df = self.remove_unreasonable_time(df)
 		return df
@@ -57,11 +68,13 @@ class FeatureEngineeringV1:
 		wind_dir_columns = df.columns[df.columns.str.startswith('wind_dir')]
 		lat_lon_columns = ['Ac_Lat', 'Ac_Lon']
 		altitude_columns = ['Ac_feet']
+		target_columns = ['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet']
 		
 		df[wind_speed_columns] = self.scalers['wind_speed'].inverse_transform(df[wind_speed_columns])
 		df[wind_dir_columns] = self.scalers['wind_dir'].inverse_transform(df[wind_dir_columns])
 		df[lat_lon_columns] = self.scalers['lat_lon'].inverse_transform(df[lat_lon_columns])
 		df[altitude_columns] = self.scalers['altitude'].inverse_transform(df[altitude_columns])
+		df[target_columns] = self.scalers['target'].inverse_transform(df[target_columns])
 		
 		return df
 	
