@@ -1,7 +1,9 @@
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
-from tqdm import tqdm
+from sklearn.model_selection import train_test_split
+import torch
+from torch.utils.data import TensorDataset, DataLoader
 
 
 class FeatureEngineeringV1:
@@ -15,7 +17,6 @@ class FeatureEngineeringV1:
 		self.fitted = False
 	
 	def normalize_features(self, df):
-		# Normalizing wind speed and direction
 		wind_speed_columns = df.columns[df.columns.str.startswith('wind_speed')]
 		wind_dir_columns = df.columns[df.columns.str.startswith('wind_dir')]
 		lat_lon_columns = ['Ac_Lat', 'Ac_Lon']
@@ -29,9 +30,23 @@ class FeatureEngineeringV1:
 		self.fitted = True
 		return df
 	
+	def remove_unreasonable_time(self, df, max_threshold=10000, min_flight_time=4000):
+		# Remove rows with Time_step greater than max_threshold
+		cleaned_df = df[df['Time_step'] < max_threshold]
+		
+		# Identify flights with maximum Time_step less than min_flight_time
+		flights_to_remove = cleaned_df.groupby('Ac_id')['Time_step'].max() < min_flight_time
+		id_to_remove = flights_to_remove[flights_to_remove].index
+		
+		# Remove these flights from the cleaned dataframe
+		cleaned_df = cleaned_df[~cleaned_df['Ac_id'].isin(id_to_remove)]
+		
+		return cleaned_df
+	
 	def process_data(self, csv_path):
 		df = pd.read_csv(csv_path)
 		df = self.normalize_features(df)
+		df = self.remove_unreasonable_time(df)
 		return df
 	
 	def decode_features(self, df):
@@ -47,8 +62,32 @@ class FeatureEngineeringV1:
 		df[wind_dir_columns] = self.scalers['wind_dir'].inverse_transform(df[wind_dir_columns])
 		df[lat_lon_columns] = self.scalers['lat_lon'].inverse_transform(df[lat_lon_columns])
 		df[altitude_columns] = self.scalers['altitude'].inverse_transform(df[altitude_columns])
-	
+		
 		return df
+	
+	def padding_features(self, df):
+		total_flights = df['Route'].nunique()
+		max_time_step = df['Timestep'].max()
+		num_wind_conditions = len([col for col in df.columns if 'wind_speed' in col or 'wind_dir' in col])
+		X = np.zeros((total_flights, max_time_step, num_wind_conditions))
+		y = np.zeros((total_flights, max_time_step, 4))  # For Ac_kts, Ac_Lat, Ac_Lon, Ac_feet
+		
+		routes = df['Route'].unique()
+		for i, route in enumerate(routes):
+			route_data = df[df['Route'] == route]
+			wind_conditions = route_data[[col for col in df.columns if 'wind_speed' in col or 'wind_dir' in col]].values
+			flight_info = route_data[['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet']].values
+			
+			X[i, :len(wind_conditions), :] = wind_conditions
+			y[i, :len(flight_info), :] = flight_info
+		
+		return X, y
+	
+	def split_train_test(self, X, y, test_size=0.2, val_size=0.25):
+		X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=test_size, random_state=42)
+		X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=val_size, random_state=42)
+		return X_train, X_val, X_test, y_train, y_val, y_test
+
 
 # class FeatureEngineeringV0:
 # 	def __init__(self, sequence_length=10):
