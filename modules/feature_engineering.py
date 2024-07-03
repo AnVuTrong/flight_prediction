@@ -66,17 +66,17 @@ class FeatureEngineeringV1:
 		return df
 	
 	def padding_features(self, df):
-		total_flights = df['Route'].nunique()
+		total_flights = df['Ac_id'].nunique()
 		max_time_step = df['Timestep'].max()
 		num_wind_conditions = len([col for col in df.columns if 'wind_speed' in col or 'wind_dir' in col])
 		X = np.zeros((total_flights, max_time_step, num_wind_conditions))
 		y = np.zeros((total_flights, max_time_step, 4))  # For Ac_kts, Ac_Lat, Ac_Lon, Ac_feet
 		
-		routes = df['Route'].unique()
-		for i, route in enumerate(routes):
-			route_data = df[df['Route'] == route]
-			wind_conditions = route_data[[col for col in df.columns if 'wind_speed' in col or 'wind_dir' in col]].values
-			flight_info = route_data[['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet']].values
+		ids = df['Ac_id'].unique()
+		for i, id in enumerate(ids):
+			id_data = df[df['Ac_id'] == id]
+			wind_conditions = id_data[[col for col in df.columns if 'wind_speed' in col or 'wind_dir' in col]].values
+			flight_info = id_data[['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet']].values
 			
 			X[i, :len(wind_conditions), :] = wind_conditions
 			y[i, :len(flight_info), :] = flight_info
@@ -119,13 +119,3 @@ class FeatureEngineeringV1:
 # 		df = self.normalize_features(df)
 # 		sequences, targets = self.create_sequences(df)
 # 		return sequences, targets
-
-
-# Example usage
-if __name__ == "__main__":
-	fe = FeatureEngineeringV1()
-	processed_df = fe.process_data('data/csv/raw.csv')
-	print(processed_df.head())
-	
-	decoded_df = fe.decode_features(processed_df.copy())
-	print(decoded_df.head())
