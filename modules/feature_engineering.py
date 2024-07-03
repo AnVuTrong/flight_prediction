@@ -67,7 +67,7 @@ class FeatureEngineeringV1:
 	
 	def padding_features(self, df):
 		total_flights = df['Ac_id'].nunique()
-		max_time_step = df['Timestep'].max()
+		max_time_step = df['Time_step'].max()
 		num_wind_conditions = len([col for col in df.columns if 'wind_speed' in col or 'wind_dir' in col])
 		X = np.zeros((total_flights, max_time_step, num_wind_conditions))
 		y = np.zeros((total_flights, max_time_step, 4))  # For Ac_kts, Ac_Lat, Ac_Lon, Ac_feet
