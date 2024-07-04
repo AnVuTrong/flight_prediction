@@ -63,15 +63,11 @@ class FeatureEngineeringV1:
 	def decode_features(self, df):
 		if not self.fitted:
 			raise Exception("Scalers not fitted. Call process_data first.")
-		
-		# wind_speed_columns = df.columns[df.columns.str.startswith('wind_speed')]
-		# wind_dir_columns = df.columns[df.columns.str.startswith('wind_dir')]
+	
 		lat_lon_columns = ['Ac_Lat', 'Ac_Lon']
 		altitude_columns = ['Ac_feet']
 		target_columns = ['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet']
-		
-		# df[wind_speed_columns] = self.scalers['wind_speed'].inverse_transform(df[wind_speed_columns])
-		# df[wind_dir_columns] = self.scalers['wind_dir'].inverse_transform(df[wind_dir_columns])
+
 		df[lat_lon_columns] = self.scalers['lat_lon'].inverse_transform(df[lat_lon_columns])
 		df[altitude_columns] = self.scalers['altitude'].inverse_transform(df[altitude_columns])
 		df[target_columns] = self.scalers['target'].inverse_transform(df[target_columns])

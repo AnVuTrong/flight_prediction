@@ -14,9 +14,9 @@ class FlightVisualizer:
 	def __init__(self, model_checkpoint_path, data_path):
 		self.model_checkpoint_path = model_checkpoint_path
 		self.data_path = data_path
-		self.feature_engineering = FeatureEngineeringV1()
 		self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 		self.model = self.load_model()
+		self.fe = FeatureEngineeringV1()
 	
 	def load_model(self):
 		if not os.path.isfile(self.model_checkpoint_path):
@@ -26,19 +26,11 @@ class FlightVisualizer:
 		model.eval()
 		return model
 	
-	def preprocess_data(self):
-		df = pd.read_csv(self.data_path)
-		df = self.feature_engineering.common_preprocessing(df)
-		df = self.feature_engineering.remove_unreasonable_time(df)
-		df_normalized = self.feature_engineering.normalize_features(df)
-		return df, df_normalized
-	
-	def get_random_flight(self, df, df_normalized):
+	def get_random_flight(self, df):
 		flight_ids = df['Ac_id'].unique()
 		random_flight_id = random.choice(flight_ids)
 		flight_data = df[df['Ac_id'] == random_flight_id]
-		flight_data_normalized = df_normalized[df_normalized['Ac_id'] == random_flight_id]
-		return flight_data, flight_data_normalized
+		return random_flight_id, flight_data
 	
 	def predict_flight_path(self, flight_data_normalized):
 		wind_conditions = flight_data_normalized[
@@ -59,7 +51,7 @@ class FlightVisualizer:
 		        label='Actual Path')
 		
 		# Predicted path
-		predicted_path_decoded = self.feature_engineering.decode_features(
+		predicted_path_decoded = self.fe.decode_features(
 			pd.DataFrame(predicted_path, columns=['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet']))
 		ax.plot(predicted_path_decoded['Ac_Lon'], predicted_path_decoded['Ac_Lat'], predicted_path_decoded['Ac_feet'],
 		        label='Predicted Path', linestyle='--')
@@ -73,7 +65,7 @@ class FlightVisualizer:
 	def visualize_flight_path_plotly(self, actual_flight_data, predicted_path):
 		# Predicted path
 		predicted_path_df = pd.DataFrame(predicted_path, columns=['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet'])
-		predicted_path_decoded = self.feature_engineering.decode_features(predicted_path_df)
+		predicted_path_decoded = self.fe.decode_features(predicted_path_df)
 		
 		# Create 3D plot
 		fig = make_subplots(
@@ -114,10 +106,24 @@ class FlightVisualizer:
 		
 		fig.show()
 	
+	def print_actual_path(self, actual_flight_data):
+		actual_path_df = actual_flight_data[['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet']]
+		print("Actual Path (Target Variables):")
+		print(actual_path_df)
+		
+	def print_predicted_path(self, predicted_path):
+		predicted_path_df = pd.DataFrame(predicted_path, columns=['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet'])
+		predicted_path_decoded = self.fe.decode_features(predicted_path_df)
+		print("Predicted Path (Target Variables):")
+		print(predicted_path_decoded)
+		
 	def run_visualization(self, use_plotly=False):
-		df, df_normalized = self.preprocess_data()
-		actual_flight_data, flight_data_normalized = self.get_random_flight(df, df_normalized)
-		predicted_path = self.predict_flight_path(flight_data_normalized)
+		df = pd.read_csv(self.data_path)
+		df_normalized = self.fe.process_data(self.data_path)
+		random_flight_id, actual_flight_data = self.get_random_flight(df_normalized)
+		self.print_actual_path(df[df['Ac_id'] == random_flight_id])
+		predicted_path = self.predict_flight_path(actual_flight_data)
+		self.print_predicted_path(predicted_path)
 		if use_plotly:
 			self.visualize_flight_path_plotly(actual_flight_data, predicted_path)
 		else:
@@ -126,7 +132,7 @@ class FlightVisualizer:
 
 if __name__ == "__main__":
 	checkpoint_path = '../log/epoch=55-val_loss=0.00.ckpt'
-	data_path = '../data/csv/processed.csv'
+	csv_path = '../data/csv/raw.csv'
 	
-	visualizer = FlightVisualizer(checkpoint_path, data_path)
+	visualizer = FlightVisualizer(checkpoint_path, csv_path)
 	visualizer.run_visualization(use_plotly=True)
