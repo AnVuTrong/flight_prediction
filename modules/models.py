@@ -75,5 +75,4 @@ class FlightLSTM(pl.LightningModule):
 	
 	def configure_optimizers(self):
 		optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
-		scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
-		return [optimizer], [scheduler]
+		return optimizer
