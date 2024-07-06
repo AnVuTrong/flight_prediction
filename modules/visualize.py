@@ -111,7 +111,7 @@ class FlightVisualizer:
 				yaxis_title='Latitude',
 				zaxis_title='Altitude (feet)'
 			),
-			title='Actual vs Predicted Flight Path'
+			title='Actual vs Predicted Flight Path with Plotly'
 		)
 		
 		fig.show()
@@ -173,7 +173,7 @@ class FlightVisualizer:
 				zoom=4,
 				center=dict(lat=actual_flight_data['Ac_Lat'].mean(), lon=actual_flight_data['Ac_Lon'].mean())
 			),
-			title='Actual vs Predicted Flight Path with Speed and Time',
+			title='Actual vs Predicted Flight Path with Mapbox',
 			height=800,
 		)
 		
@@ -181,13 +181,13 @@ class FlightVisualizer:
 	
 	def print_actual_path(self, actual_flight_data):
 		actual_path_df = actual_flight_data[['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet']]
-		print("Actual Path (Target Variables):")
+		print(f"Actual Path of flight{actual_flight_data['Ac_id'][0]}:")
 		print(actual_path_df)
 	
 	def print_predicted_path(self, predicted_path):
 		predicted_path_df = pd.DataFrame(predicted_path, columns=['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet'])
 		predicted_path_decoded = self.fe.decode_features(predicted_path_df)
-		print("Predicted Path (Target Variables):")
+		print(f"Predicted Path of flight{predicted_path['Ac_id'][0]}:")
 		print(predicted_path_decoded)
 
 	def run_visualization(self, name='flight_path_map'):
