@@ -70,6 +70,7 @@ class FlightVisualizer:
 		ax.set_ylabel('Latitude')
 		ax.set_zlabel('Altitude (feet)')
 		ax.legend()
+		plt.title('Actual vs Predicted Flight Path img')
 		plt.show()
 	
 	def visualize_flight_path_plotly(self, actual_flight_data, predicted_path):
@@ -139,6 +140,14 @@ class FlightVisualizer:
 		
 		return m
 	
+	def save_folium_file(self, df, flight_id, predicted_path, name):
+		m = self.visualize_flight_path_folium(
+			df[df['Ac_id'] == flight_id],
+			predicted_path
+		)
+		m.save(f'../output/{name}.html')
+		print(f"Map saved as {name}.html")
+	
 	def visualize_flight_path_mapbox(self, actual_flight_data, predicted_path):
 		# Predicted path
 		predicted_path_df = pd.DataFrame(predicted_path, columns=['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet'])
@@ -181,32 +190,28 @@ class FlightVisualizer:
 	
 	def print_actual_path(self, actual_flight_data):
 		actual_path_df = actual_flight_data[['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet']]
-		print(f"Actual Path of flight{actual_flight_data['Ac_id'][0]}:")
+		print(f"Actual Path of flight{actual_flight_data['Ac_id'].iloc[0]}:")
 		print(actual_path_df)
 	
 	def print_predicted_path(self, predicted_path):
 		predicted_path_df = pd.DataFrame(predicted_path, columns=['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet'])
 		predicted_path_decoded = self.fe.decode_features(predicted_path_df)
-		print(f"Predicted Path of flight{predicted_path['Ac_id'][0]}:")
+		print("Predicted Path (Target Variables):")
 		print(predicted_path_decoded)
 
 	def run_visualization(self, name='flight_path_map'):
 		df = pd.read_csv(self.data_path)
 		df_normalized = self.fe.process_data(self.data_path)
 		random_flight_id, actual_flight_data = self.get_random_flight(df_normalized)
-		self.print_actual_path(df[df['Ac_id'] == random_flight_id])
 		predicted_path = self.predict_flight_path(actual_flight_data)
+		
+		self.print_actual_path(df[df['Ac_id'] == random_flight_id])
 		self.print_predicted_path(predicted_path)
 		
-		m = self.visualize_flight_path_folium(
-			df[df['Ac_id'] == random_flight_id],
-			predicted_path
-		)
-		m.save(f'../output/{name}.html')
-		print(f"Map saved as {name}.html")
+		self.visualize_flight_path(actual_flight_data, predicted_path)
 		self.visualize_flight_path_plotly(actual_flight_data, predicted_path)
 		self.visualize_flight_path_mapbox(actual_flight_data, predicted_path)
-		self.visualize_flight_path(actual_flight_data, predicted_path)
+		self.save_folium_file(df, random_flight_id, predicted_path, name)
 
 
 if __name__ == "__main__":
