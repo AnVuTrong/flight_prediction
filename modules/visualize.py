@@ -14,6 +14,7 @@ from modules.feature_engineering import FeatureEngineeringV1
 
 dotenv.load_dotenv()
 
+
 class FlightVisualizer:
 	def __init__(self, model_checkpoint_path, data_path):
 		self.map_box_api_key = os.getenv("MAPBOX_FLIGHT_PATH_RNN_API_KEY")
@@ -52,7 +53,8 @@ class FlightVisualizer:
 			predicted_path = self.model(all_features).squeeze(0).cpu().numpy()
 		return predicted_path
 	
-	def visualize_flight_path(self, actual_flight_data, predicted_path):
+	def visualize_flight_path(self, df, random_flight_id, predicted_path):
+		actual_flight_data = df[df['Ac_id'] == random_flight_id]
 		fig = plt.figure(figsize=(10, 20))
 		ax = fig.add_subplot(111, projection='3d')
 		
@@ -73,7 +75,8 @@ class FlightVisualizer:
 		plt.title('Actual vs Predicted Flight Path img')
 		plt.show()
 	
-	def visualize_flight_path_plotly(self, actual_flight_data, predicted_path):
+	def visualize_flight_path_plotly(self, df, random_flight_id, predicted_path):
+		actual_flight_data = df[df['Ac_id'] == random_flight_id]
 		# Predicted path
 		predicted_path_df = pd.DataFrame(predicted_path, columns=['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet'])
 		predicted_path_decoded = self.fe.decode_features(predicted_path_df)
@@ -148,7 +151,8 @@ class FlightVisualizer:
 		m.save(f'../output/{name}.html')
 		print(f"Map saved as {name}.html")
 	
-	def visualize_flight_path_mapbox(self, actual_flight_data, predicted_path):
+	def visualize_flight_path_mapbox(self, df, random_flight_id, predicted_path):
+		actual_flight_data = df[df['Ac_id'] == random_flight_id]
 		# Predicted path
 		predicted_path_df = pd.DataFrame(predicted_path, columns=['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet'])
 		predicted_path_decoded = self.fe.decode_features(predicted_path_df)
@@ -198,7 +202,7 @@ class FlightVisualizer:
 		predicted_path_decoded = self.fe.decode_features(predicted_path_df)
 		print("Predicted Path (Target Variables):")
 		print(predicted_path_decoded)
-
+	
 	def run_visualization(self, name='flight_path_map'):
 		df = pd.read_csv(self.data_path)
 		df_normalized = self.fe.process_data(self.data_path)
@@ -208,10 +212,18 @@ class FlightVisualizer:
 		self.print_actual_path(df[df['Ac_id'] == random_flight_id])
 		self.print_predicted_path(predicted_path)
 		
-		self.visualize_flight_path(actual_flight_data, predicted_path)
-		self.visualize_flight_path_plotly(actual_flight_data, predicted_path)
-		self.visualize_flight_path_mapbox(actual_flight_data, predicted_path)
-		self.save_folium_file(df, random_flight_id, predicted_path, name)
+		self.visualize_flight_path(
+			df, random_flight_id, predicted_path
+		)
+		self.visualize_flight_path_plotly(
+			df, random_flight_id, predicted_path
+		)
+		self.visualize_flight_path_mapbox(
+			df, random_flight_id, predicted_path,
+		)
+		self.save_folium_file(
+			df, random_flight_id, predicted_path, name
+		)
 
 
 if __name__ == "__main__":
