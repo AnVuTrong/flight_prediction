@@ -126,8 +126,8 @@ class FlightVisualizer:
 		folium.PolyLine(predicted_coords, color='red', weight=2.5, opacity=1, dash_array='5').add_to(m)
 		
 		# Add markers for start and end points
-		folium.Marker(actual_coords[0], tooltip='Start', icon=folium.Icon(color='green')).add_to(m)
-		folium.Marker(actual_coords[-1], tooltip='End', icon=folium.Icon(color='red')).add_to(m)
+		folium.Marker(actual_coords[0], tooltip='Take off', icon=folium.Icon(color='green')).add_to(m)
+		folium.Marker(actual_coords[-1], tooltip='Landing', icon=folium.Icon(color='red')).add_to(m)
 		
 		return m
 	
@@ -142,7 +142,7 @@ class FlightVisualizer:
 		print("Predicted Path (Target Variables):")
 		print(predicted_path_decoded)
 	
-	def run_visualization(self, use_plotly=True, use_map=True):
+	def run_visualization(self, use_plotly=True, use_map=True, name='flight_path_map'):
 		df = pd.read_csv(self.data_path)
 		df_normalized = self.fe.process_data(self.data_path)
 		random_flight_id, actual_flight_data = self.get_random_flight(df_normalized)
@@ -150,9 +150,12 @@ class FlightVisualizer:
 		predicted_path = self.predict_flight_path(actual_flight_data)
 		self.print_predicted_path(predicted_path)
 		if use_map:
-			m = self.visualize_flight_path_folium(df[df['Ac_id'] == random_flight_id], predicted_path)
-			m.save('flight_path_map.html')
-			print("Map saved as flight_path_map.html")
+			m = self.visualize_flight_path_folium(
+				df[df['Ac_id'] == random_flight_id],
+				predicted_path
+			)
+			m.save(f'../output/{name}.html')
+			print("Map saved as name.html")
 		elif use_plotly:
 			self.visualize_flight_path_plotly(actual_flight_data, predicted_path)
 		else:
