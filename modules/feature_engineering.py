@@ -45,11 +45,21 @@ class FeatureEngineeringV1:
 		ac_type_encoded = self.encoders['ac_type'].fit_transform(df[['Ac_type']])
 		phase_encoded = self.encoders['phase'].fit_transform(df[['Phase']])
 		
+		ac_type_df = pd.DataFrame(
+			ac_type_encoded,
+			columns=self.encoders['ac_type'].get_feature_names_out(['Ac_type'])
+		).reset_index(drop=True)
+		
+		phase_df = pd.DataFrame(
+			phase_encoded,
+			columns=self.encoders['phase'].get_feature_names_out(['Phase'])
+		).reset_index(drop=True)
+		
 		df = pd.concat(
 			[
-				df,
-				pd.DataFrame(ac_type_encoded, columns=self.encoders['ac_type'].get_feature_names_out(['Ac_type'])),
-				pd.DataFrame(phase_encoded, columns=self.encoders['phase'].get_feature_names_out(['Phase'])),
+				df.reset_index(drop=True),
+				ac_type_df,
+				phase_df,
 			], axis=1
 		)
 		df = df.drop(['Ac_type', 'Phase'], axis=1)
@@ -62,6 +72,7 @@ class FeatureEngineeringV1:
 		flights_to_remove = cleaned_df.groupby('Ac_id')['Time_step'].max() < min_flight_time
 		id_to_remove = flights_to_remove[flights_to_remove].index
 		cleaned_df = cleaned_df[~cleaned_df['Ac_id'].isin(id_to_remove)]
+		cleaned_df.reset_index(drop=True)
 		return cleaned_df
 	
 	def process_data(self, csv_path):
