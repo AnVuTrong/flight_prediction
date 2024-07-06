@@ -5,6 +5,7 @@ import torch
 import folium
 import pandas as pd
 import numpy as np
+import pydeck as pdk
 import matplotlib.pyplot as plt
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
@@ -24,6 +25,7 @@ class FlightVisualizer:
 		self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 		self.model = self.load_model()
 		self.fe = FeatureEngineeringV1()
+		self.plotly_template = 'plotly'
 	
 	def load_model(self):
 		model = FlightLSTM.load_from_checkpoint(self.model_checkpoint_path)
@@ -186,7 +188,7 @@ class FlightVisualizer:
 		fig.add_trace(predicted_trace, row=1, col=1)
 		fig.add_trace(takeoff_trace, row=1, col=1)
 		fig.add_trace(landing_trace, row=1, col=1)
-		
+
 		fig.update_layout(
 			scene=dict(
 				xaxis_title='Longitude',
@@ -194,8 +196,9 @@ class FlightVisualizer:
 				zaxis_title='Altitude (feet)'
 			),
 			title='Actual vs Predicted Flight Path with Plotly',
+			template=self.plotly_template,
+			
 		)
-		
 		fig.show()
 	
 	def visualize_flight_path_scattergeo(self, df, random_flight_id, predicted_path):
@@ -256,69 +259,79 @@ class FlightVisualizer:
 				countrycolor="rgb(255, 255, 255)"
 			),
 			title='Actual vs Predicted Flight Path with Plotly',
+			template=self.plotly_template,
 		)
 		
 		fig.show()
 	
-	def visualize_flight_path_mapbox(self, df, random_flight_id, predicted_path):
+	def visualize_flight_path_pydeck(self, df, random_flight_id, predicted_path):
 		actual_flight_data = df[df['Ac_id'] == random_flight_id]
-		
-		# Predicted path
 		predicted_path_df = pd.DataFrame(predicted_path, columns=['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet'])
 		predicted_path_decoded = self.fe.decode_features(predicted_path_df)
 		
-		# Create Mapbox plot
-		trace_actual = go.Scattermapbox(
-			lon=actual_flight_data['Ac_Lon'],
-			lat=actual_flight_data['Ac_Lat'],
-			mode='markers+lines',
-			name='Actual Path',
-			marker=dict(
-				size=4,
-				color='blue',
-				opacity=0.7
-			)
+		# Actual path layer
+		actual_path_layer = pdk.Layer(
+			'PathLayer',
+			actual_flight_data,
+			get_path='[["Ac_Lon", "Ac_Lat", "Ac_feet"]]',
+			get_color=[0, 0, 255],
+			width_scale=20,
+			width_min_pixels=2,
+			get_width=5,
+			pickable=True
 		)
 		
-		trace_predicted = go.Scattermapbox(
-			lon=predicted_path_decoded['Ac_Lon'],
-			lat=predicted_path_decoded['Ac_Lat'],
-			mode='markers+lines',
-			name='Predicted Path',
-			marker=dict(
-				size=4,
-				color='red',
-				opacity=0.7
-			)
+		# Predicted path layer
+		predicted_path_layer = pdk.Layer(
+			'PathLayer',
+			predicted_path_decoded,
+			get_path='[["Ac_Lon", "Ac_Lat", "Ac_feet"]]',
+			get_color=[255, 0, 0],
+			width_scale=20,
+			width_min_pixels=2,
+			get_width=5,
+			pickable=True,
+			dash_size=20,
+			dash_gap_size=10
 		)
 		
-		trace_takeoff = go.Scattermapbox(
-			lon=[actual_flight_data['Ac_Lon'].iloc[0]],
-			lat=[actual_flight_data['Ac_Lat'].iloc[0]],
-			mode='markers',
-			marker=dict(size=10, color='green'),
-			name='Takeoff'
+		# Start and end points
+		start_point = pdk.Layer(
+			'ScatterplotLayer',
+			data=[{'Lon': actual_flight_data['Ac_Lon'].iloc[0], 'Lat': actual_flight_data['Ac_Lat'].iloc[0],
+			       'Alt': actual_flight_data['Ac_feet'].iloc[0]}],
+			get_position='[Lon, Lat, Alt]',
+			get_color=[0, 255, 0],
+			get_radius=100,
 		)
 		
-		trace_landing = go.Scattermapbox(
-			lon=[actual_flight_data['Ac_Lon'].iloc[-1]],
-			lat=[actual_flight_data['Ac_Lat'].iloc[-1]],
-			mode='markers',
-			marker=dict(size=10, color='red'),
-			name='Landing'
+		end_point = pdk.Layer(
+			'ScatterplotLayer',
+			data=[{'Lon': actual_flight_data['Ac_Lon'].iloc[-1], 'Lat': actual_flight_data['Ac_Lat'].iloc[-1],
+			       'Alt': actual_flight_data['Ac_feet'].iloc[-1]}],
+			get_position='[Lon, Lat, Alt]',
+			get_color=[255, 0, 0],
+			get_radius=100,
 		)
 		
-		layout = go.Layout(
-			autosize=True,
-			mapbox=dict(
-				accesstoken=self.map_box_api_key,
-				center=dict(lat=actual_flight_data['Ac_Lat'].mean(), lon=actual_flight_data['Ac_Lon'].mean())
-			),
-			title='Actual vs Predicted Flight Path with Mapbox',
+		# View
+		view_state = pdk.ViewState(
+			latitude=actual_flight_data['Ac_Lat'].mean(),
+			longitude=actual_flight_data['Ac_Lon'].mean(),
+			zoom=5,
+			pitch=45,
+			bearing=0
 		)
 		
-		fig = go.Figure(data=[trace_actual, trace_predicted, trace_takeoff, trace_landing], layout=layout)
-		fig.show()
+		# Deck
+		r = pdk.Deck(
+			layers=[actual_path_layer, predicted_path_layer, start_point, end_point],
+			initial_view_state=view_state,
+			tooltip={"text": "{Ac_id}"}
+		)
+		
+		r.to_html("../output/flight_path_pydeck.html")
+		print("3D Flight path visualization saved as flight_path_pydeck.html")
 	
 	def visualize_flight_path_folium(self, actual_flight_data, predicted_path):
 		# Predicted path
@@ -383,7 +396,7 @@ class FlightVisualizer:
 		self.visualize_flight_path_scattergeo(
 			df, random_flight_id, predicted_path
 		)
-		self.visualize_flight_path_mapbox(
+		self.visualize_flight_path_pydeck(
 			df, random_flight_id, predicted_path
 		)
 		self.save_folium_file(
