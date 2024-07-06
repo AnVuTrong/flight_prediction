@@ -6,6 +6,7 @@ import folium
 import pandas as pd
 import numpy as np
 import pydeck as pdk
+import mapwidget.mapbox as mapwidget
 import matplotlib.pyplot as plt
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
@@ -166,7 +167,7 @@ class FlightVisualizer:
 			line=dict(dash='dash')
 		)
 		
-		# Add points for takeoff and landing
+		# Add points for the takeoff and landing
 		takeoff_trace = go.Scatter3d(
 			x=[actual_flight_data['Ac_Lon'].iloc[0]],
 			y=[actual_flight_data['Ac_Lat'].iloc[0]],
@@ -188,7 +189,7 @@ class FlightVisualizer:
 		fig.add_trace(predicted_trace, row=1, col=1)
 		fig.add_trace(takeoff_trace, row=1, col=1)
 		fig.add_trace(landing_trace, row=1, col=1)
-
+		
 		fig.update_layout(
 			scene=dict(
 				xaxis_title='Longitude',
@@ -197,7 +198,7 @@ class FlightVisualizer:
 			),
 			title='Actual vs Predicted Flight Path with Plotly',
 			template=self.plotly_template,
-			
+		
 		)
 		fig.show()
 	
@@ -227,7 +228,7 @@ class FlightVisualizer:
 			line=dict(dash='dash')
 		)
 		
-		# Add points for takeoff and landing
+		# Add points for the takeoff and landing
 		takeoff_trace = go.Scattergeo(
 			lon=[actual_flight_data['Ac_Lon'].iloc[0]],
 			lat=[actual_flight_data['Ac_Lat'].iloc[0]],
@@ -269,11 +270,19 @@ class FlightVisualizer:
 		predicted_path_df = pd.DataFrame(predicted_path, columns=['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet'])
 		predicted_path_decoded = self.fe.decode_features(predicted_path_df)
 		
+		# Prepare actual path data
+		actual_path_data = actual_flight_data[['Ac_Lon', 'Ac_Lat', 'Ac_feet']].values.tolist()
+		actual_path_data = [{"path": actual_path_data}]
+		
+		# Prepare predicted path data
+		predicted_path_data = predicted_path_decoded[['Ac_Lon', 'Ac_Lat', 'Ac_feet']].values.tolist()
+		predicted_path_data = [{"path": predicted_path_data}]
+		
 		# Actual path layer
 		actual_path_layer = pdk.Layer(
 			'PathLayer',
-			actual_flight_data,
-			get_path='[["Ac_Lon", "Ac_Lat", "Ac_feet"]]',
+			actual_path_data,
+			get_path='path',
 			get_color=[0, 0, 255],
 			width_scale=20,
 			width_min_pixels=2,
@@ -284,8 +293,8 @@ class FlightVisualizer:
 		# Predicted path layer
 		predicted_path_layer = pdk.Layer(
 			'PathLayer',
-			predicted_path_decoded,
-			get_path='[["Ac_Lon", "Ac_Lat", "Ac_feet"]]',
+			predicted_path_data,
+			get_path='path',
 			get_color=[255, 0, 0],
 			width_scale=20,
 			width_min_pixels=2,
@@ -295,23 +304,30 @@ class FlightVisualizer:
 			dash_gap_size=10
 		)
 		
-		# Start and end points
+		# Start point
 		start_point = pdk.Layer(
 			'ScatterplotLayer',
-			data=[{'Lon': actual_flight_data['Ac_Lon'].iloc[0], 'Lat': actual_flight_data['Ac_Lat'].iloc[0],
-			       'Alt': actual_flight_data['Ac_feet'].iloc[0]}],
+			data=[{
+				'Lon': actual_flight_data['Ac_Lon'].iloc[0],
+				'Lat': actual_flight_data['Ac_Lat'].iloc[0],
+				'Alt': actual_flight_data['Ac_feet'].iloc[0]
+			}],
 			get_position='[Lon, Lat, Alt]',
 			get_color=[0, 255, 0],
-			get_radius=100,
+			get_radius=10000,
 		)
 		
+		# End point
 		end_point = pdk.Layer(
 			'ScatterplotLayer',
-			data=[{'Lon': actual_flight_data['Ac_Lon'].iloc[-1], 'Lat': actual_flight_data['Ac_Lat'].iloc[-1],
-			       'Alt': actual_flight_data['Ac_feet'].iloc[-1]}],
+			data=[{
+				'Lon': actual_flight_data['Ac_Lon'].iloc[-1],
+				'Lat': actual_flight_data['Ac_Lat'].iloc[-1],
+				'Alt': actual_flight_data['Ac_feet'].iloc[-1]
+			}],
 			get_position='[Lon, Lat, Alt]',
 			get_color=[255, 0, 0],
-			get_radius=100,
+			get_radius=10000,
 		)
 		
 		# View
@@ -327,11 +343,121 @@ class FlightVisualizer:
 		r = pdk.Deck(
 			layers=[actual_path_layer, predicted_path_layer, start_point, end_point],
 			initial_view_state=view_state,
-			tooltip={"text": "{Ac_id}"}
+			tooltip={"text": "{path}"}
 		)
 		
 		r.to_html("../output/flight_path_pydeck.html")
 		print("3D Flight path visualization saved as flight_path_pydeck.html")
+	
+	def visualize_flight_path_mapwidget(self, df, random_flight_id, predicted_path):
+		actual_flight_data = df[df['Ac_id'] == random_flight_id]
+		predicted_path_df = pd.DataFrame(predicted_path, columns=['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet'])
+		predicted_path_decoded = self.fe.decode_features(predicted_path_df)
+		
+		# Prepare actual path data
+		actual_path_data = [{'lon': lon, 'lat': lat, 'alt': alt} for lon, lat, alt in
+		                    actual_flight_data[['Ac_Lon', 'Ac_Lat', 'Ac_feet']].values]
+		actual_path_list = [f"[{p['lon']}, {p['lat']}, {p['alt']}]" for p in actual_path_data]
+		actual_path_js = f"[{', '.join(actual_path_list)}]"
+		
+		# Prepare predicted path data
+		predicted_path_data = [{'lon': lon, 'lat': lat, 'alt': alt} for lon, lat, alt in
+		                       predicted_path_decoded[['Ac_Lon', 'Ac_Lat', 'Ac_feet']].values]
+		predicted_path_list = [f"[{p['lon']}, {p['lat']}, {p['alt']}]" for p in predicted_path_data]
+		predicted_path_js = f"[{', '.join(predicted_path_list)}]"
+		
+		# Create map
+		m = mapwidget.Map(center=[actual_flight_data['Ac_Lat'].mean(), actual_flight_data['Ac_Lon'].mean()], zoom=5,
+		                  height='600px', token=self.map_box_api_key)
+		
+		# JavaScript code to add the paths and markers
+		esm = f"""
+	    const map = new mapboxgl.Map({{
+	        container: 'map',
+	        zoom: 14,
+	        center: [{actual_flight_data['Ac_Lon'].mean()}, {actual_flight_data['Ac_Lat'].mean()}],
+	        pitch: 80,
+	        bearing: 41,
+	        style: 'mapbox://styles/mapbox/satellite-streets-v12'
+	    }});
+
+	    map.on('style.load', () => {{
+	        map.addSource('mapbox-dem', {{
+	            'type': 'raster-dem',
+	            'url': 'mapbox://mapbox.mapbox-terrain-dem-v1',
+	            'tileSize': 512,
+	            'maxzoom': 14
+	        }});
+	        map.setTerrain({{ 'source': 'mapbox-dem', 'exaggeration': 1.5 }});
+
+	        // Add actual flight path
+	        map.addLayer({{
+	            'id': 'actual-path',
+	            'type': 'line',
+	            'source': {{
+	                'type': 'geojson',
+	                'data': {{
+	                    'type': 'Feature',
+	                    'properties': {{}},
+	                    'geometry': {{
+	                        'type': 'LineString',
+	                        'coordinates': {actual_path_js}
+	                    }}
+	                }}
+	            }},
+	            'layout': {{
+	                'line-join': 'round',
+	                'line-cap': 'round'
+	            }},
+	            'paint': {{
+	                'line-color': '#0000FF',
+	                'line-width': 3
+	            }}
+	        }});
+
+	        // Add predicted flight path
+	        map.addLayer({{
+	            'id': 'predicted-path',
+	            'type': 'line',
+	            'source': {{
+	                'type': 'geojson',
+	                'data': {{
+	                    'type': 'Feature',
+	                    'properties': {{}},
+	                    'geometry': {{
+	                        'type': 'LineString',
+	                        'coordinates': {predicted_path_js}
+	                    }}
+	                }}
+	            }},
+	            'layout': {{
+	                'line-join': 'round',
+	                'line-cap': 'round'
+	            }},
+	            'paint': {{
+	                'line-color': '#FF0000',
+	                'line-width': 3,
+	                'line-dasharray': [2, 2]
+	            }}
+	        }});
+
+	        // Add takeoff marker
+	        new mapboxgl.Marker({{ color: 'green' }})
+	            .setLngLat([{actual_path_data[0]['lon']}, {actual_path_data[0]['lat']}])
+	            .addTo(map)
+	            .setPopup(new mapboxgl.Popup().setText('Takeoff'));
+
+	        // Add landing marker
+	        new mapboxgl.Marker({{ color: 'red' }})
+	            .setLngLat([{actual_path_data[-1]['lon']}, {actual_path_data[-1]['lat']}])
+	            .addTo(map)
+	            .setPopup(new mapboxgl.Popup().setText('Landing'));
+	    }});
+	    """
+		m.set_esm(esm)
+		
+		# Display the map
+		return m
 	
 	def visualize_flight_path_folium(self, actual_flight_data, predicted_path):
 		# Predicted path
@@ -366,7 +492,7 @@ class FlightVisualizer:
 	
 	def print_actual_path(self, actual_flight_data):
 		actual_path_df = actual_flight_data[['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet']]
-		print(f"Actual Path of flight{actual_flight_data['Ac_id'].iloc[0]}:")
+		print(f"Actual Path of flight {actual_flight_data['Ac_id'].iloc[0]}:")
 		print(actual_path_df)
 	
 	def print_predicted_path(self, predicted_path):
@@ -399,9 +525,14 @@ class FlightVisualizer:
 		self.visualize_flight_path_pydeck(
 			df, random_flight_id, predicted_path
 		)
+		m = self.visualize_flight_path_mapwidget(
+			df, random_flight_id, predicted_path
+		)
 		self.save_folium_file(
 			df, random_flight_id, predicted_path, name
 		)
+		
+		return m
 
 
 if __name__ == "__main__":
