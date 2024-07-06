@@ -141,7 +141,7 @@ class FlightVisualizer:
 	
 	def visualize_flight_path_mapbox(self, actual_flight_data, predicted_path):
 		# Predicted path
-		predicted_path_df = pd.DataFrame(predicted_path, columns=['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet', 'Time_step'])
+		predicted_path_df = pd.DataFrame(predicted_path, columns=['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet'])
 		predicted_path_decoded = self.fe.decode_features(predicted_path_df)
 		
 		# Create 3D plot with Mapbox
@@ -163,7 +163,7 @@ class FlightVisualizer:
 			mode='markers+lines',
 			marker=dict(size=4),
 			name='Predicted Path',
-			line=dict(dash='dash')
+			line=dict(width=2)
 		))
 		
 		fig.update_layout(
