@@ -178,61 +178,7 @@ class FlightVisualizer:
         print(f"Map saved as {name}.html")
 
     def visualize_flight_path_mapbox(self, df, random_flight_id, predicted_path):
-        actual_flight_data = df[df['Ac_id'] == random_flight_id]
-        # Predicted path
-        predicted_path_df = pd.DataFrame(predicted_path, columns=['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet'])
-        predicted_path_decoded = self.fe.decode_features(predicted_path_df)
-
-        # Create 3D plot with Mapbox
-        fig = go.Figure()
-
-        # Actual path
-        fig.add_trace(go.Scattermapbox(
-            lon=actual_flight_data['Ac_Lon'],
-            lat=actual_flight_data['Ac_Lat'],
-            mode='markers+lines',
-            marker=dict(size=4),
-            name='Actual Path'
-        ))
-
-        # Predicted path
-        fig.add_trace(go.Scattermapbox(
-            lon=predicted_path_decoded['Ac_Lon'],
-            lat=predicted_path_decoded['Ac_Lat'],
-            mode='markers+lines',
-            marker=dict(size=4),
-            name='Predicted Path',
-            line=dict(width=2)
-        ))
-
-        # Add points for takeoff and landing
-        fig.add_trace(go.Scattermapbox(
-            lon=[actual_flight_data['Ac_Lon'].iloc[0]],
-            lat=[actual_flight_data['Ac_Lat'].iloc[0]],
-            mode='markers',
-            marker=dict(size=10, color='green'),
-            name='Takeoff'
-        ))
-        fig.add_trace(go.Scattermapbox(
-            lon=[actual_flight_data['Ac_Lon'].iloc[-1]],
-            lat=[actual_flight_data['Ac_Lat'].iloc[-1]],
-            mode='markers',
-            marker=dict(size=10, color='red'),
-            name='Landing'
-        ))
-
-        fig.update_layout(
-            mapbox=dict(
-                accesstoken=self.map_box_api_key,
-                style='mapbox://styles/mapbox/streets-v11',
-                zoom=4,
-                center=dict(lat=actual_flight_data['Ac_Lat'].mean(), lon=actual_flight_data['Ac_Lon'].mean())
-            ),
-            title='Actual vs Predicted Flight Path with Mapbox',
-            height=800,
-        )
-
-        fig.show()
+        pass
 
     def print_actual_path(self, actual_flight_data):
         actual_path_df = actual_flight_data[['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet']]
