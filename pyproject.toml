@@ -65,6 +65,8 @@ streamlit = "^1.35.0"
 squarify = "^0.4.3"
 folium = "^0.17.0"
 python-dotenv = "^1.0.1"
+cartopy = "^0.23.0"
+chart-studio = "^1.1.0"
 
 [build-system]
 requires = ["poetry-core"]
