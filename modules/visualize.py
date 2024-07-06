@@ -6,6 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
+import folium
+from folium import plugins
 from modules.models import FlightLSTM
 from modules.feature_engineering import FeatureEngineeringV1
 
@@ -43,7 +45,7 @@ class FlightVisualizer:
 		return predicted_path
 	
 	def visualize_flight_path(self, actual_flight_data, predicted_path):
-		fig = plt.figure(figsize=(10,20))
+		fig = plt.figure(figsize=(10, 20))
 		ax = fig.add_subplot(111, projection='3d')
 		
 		# Actual path
@@ -106,25 +108,52 @@ class FlightVisualizer:
 		
 		fig.show()
 	
+	def visualize_flight_path_folium(self, actual_flight_data, predicted_path):
+		# Predicted path
+		predicted_path_df = pd.DataFrame(predicted_path, columns=['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet'])
+		predicted_path_decoded = self.fe.decode_features(predicted_path_df)
+		
+		# Create map
+		m = folium.Map(location=[actual_flight_data['Ac_Lat'].mean(), actual_flight_data['Ac_Lon'].mean()],
+		               zoom_start=6)
+		
+		# Actual path
+		actual_coords = actual_flight_data[['Ac_Lat', 'Ac_Lon']].values
+		folium.PolyLine(actual_coords, color='blue', weight=2.5, opacity=1).add_to(m)
+		
+		# Predicted path
+		predicted_coords = predicted_path_decoded[['Ac_Lat', 'Ac_Lon']].values
+		folium.PolyLine(predicted_coords, color='red', weight=2.5, opacity=1, dash_array='5').add_to(m)
+		
+		# Add markers for start and end points
+		folium.Marker(actual_coords[0], tooltip='Start', icon=folium.Icon(color='green')).add_to(m)
+		folium.Marker(actual_coords[-1], tooltip='End', icon=folium.Icon(color='red')).add_to(m)
+		
+		return m
+	
 	def print_actual_path(self, actual_flight_data):
 		actual_path_df = actual_flight_data[['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet']]
 		print("Actual Path (Target Variables):")
 		print(actual_path_df)
-		
+	
 	def print_predicted_path(self, predicted_path):
 		predicted_path_df = pd.DataFrame(predicted_path, columns=['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet'])
 		predicted_path_decoded = self.fe.decode_features(predicted_path_df)
 		print("Predicted Path (Target Variables):")
 		print(predicted_path_decoded)
-		
-	def run_visualization(self, use_plotly=False):
+	
+	def run_visualization(self, use_plotly=True, use_map=True):
 		df = pd.read_csv(self.data_path)
 		df_normalized = self.fe.process_data(self.data_path)
 		random_flight_id, actual_flight_data = self.get_random_flight(df_normalized)
 		self.print_actual_path(df[df['Ac_id'] == random_flight_id])
 		predicted_path = self.predict_flight_path(actual_flight_data)
 		self.print_predicted_path(predicted_path)
-		if use_plotly:
+		if use_map:
+			m = self.visualize_flight_path_folium(df[df['Ac_id'] == random_flight_id], predicted_path)
+			m.save('flight_path_map.html')
+			print("Map saved as flight_path_map.html")
+		elif use_plotly:
 			self.visualize_flight_path_plotly(actual_flight_data, predicted_path)
 		else:
 			self.visualize_flight_path(actual_flight_data, predicted_path)
@@ -135,4 +164,4 @@ if __name__ == "__main__":
 	csv_path = '../data/csv/raw.csv'
 	
 	visualizer = FlightVisualizer(checkpoint_path, csv_path)
-	visualizer.run_visualization(use_plotly=True)
+	visualizer.run_visualization()  # Set to True to use Folium map, False to use Plotly or Matplotlib
