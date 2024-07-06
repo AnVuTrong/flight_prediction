@@ -64,6 +64,7 @@ imblearn = "^0.0"
 streamlit = "^1.35.0"
 squarify = "^0.4.3"
 folium = "^0.17.0"
+python-dotenv = "^1.0.1"
 
 [build-system]
 requires = ["poetry-core"]

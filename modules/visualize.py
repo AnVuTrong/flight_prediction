@@ -1,4 +1,5 @@
 import os
+import dotenv
 import random
 import torch
 import pandas as pd
@@ -11,9 +12,11 @@ from folium import plugins
 from modules.models import FlightLSTM
 from modules.feature_engineering import FeatureEngineeringV1
 
+dotenv.load_dotenv()
 
 class FlightVisualizer:
 	def __init__(self, model_checkpoint_path, data_path):
+		self.map_box_api_key = os.getenv("MAPBOX_FLIGHT_PATH_RNN_API_KEY")
 		self.model_checkpoint_path = model_checkpoint_path
 		self.data_path = data_path
 		self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -165,7 +168,7 @@ class FlightVisualizer:
 		
 		fig.update_layout(
 			mapbox=dict(
-				accesstoken='your_mapbox_token',  # Replace with your Mapbox token
+				accesstoken=self.map_box_api_key,
 				style='mapbox://styles/mapbox/streets-v11',
 				zoom=4,
 				center=dict(lat=actual_flight_data['Ac_Lat'].mean(), lon=actual_flight_data['Ac_Lon'].mean())
