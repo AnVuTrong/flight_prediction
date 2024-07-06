@@ -155,7 +155,7 @@ class FlightVisualizer:
 				predicted_path
 			)
 			m.save(f'../output/{name}.html')
-			print("Map saved as name.html")
+			print(f"Map saved as {name}.html")
 		elif use_plotly:
 			self.visualize_flight_path_plotly(actual_flight_data, predicted_path)
 		else:
@@ -167,4 +167,4 @@ if __name__ == "__main__":
 	csv_path = '../data/csv/raw.csv'
 	
 	visualizer = FlightVisualizer(checkpoint_path, csv_path)
-	visualizer.run_visualization()  # Set to True to use Folium map, False to use Plotly or Matplotlib
+	visualizer.run_visualization()

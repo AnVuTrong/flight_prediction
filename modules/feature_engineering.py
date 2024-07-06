@@ -11,9 +11,9 @@ class FeatureEngineeringV1:
 		self.scalers = {
 			'wind_speed': MinMaxScaler(),
 			'wind_dir'  : MinMaxScaler(),
-			'lat_lon'   : MinMaxScaler(feature_range=(-1, 1)),
+			'lat_lon'   : MinMaxScaler(),
 			'altitude'  : MinMaxScaler(),
-			'target': MinMaxScaler(),
+			'speed': MinMaxScaler(),
 		}
 		self.fitted = False
 	
@@ -29,13 +29,13 @@ class FeatureEngineeringV1:
 		wind_dir_columns = df.columns[df.columns.str.startswith('wind_dir')]
 		lat_lon_columns = ['Ac_Lat', 'Ac_Lon']
 		altitude_columns = ['Ac_feet']
-		target_columns = ['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet']
+		speed_columns = ['Ac_kts']
 		
 		df[wind_speed_columns] = self.scalers['wind_speed'].fit_transform(df[wind_speed_columns])
 		df[wind_dir_columns] = self.scalers['wind_dir'].fit_transform(df[wind_dir_columns])
 		df[lat_lon_columns] = self.scalers['lat_lon'].fit_transform(df[lat_lon_columns])
 		df[altitude_columns] = self.scalers['altitude'].fit_transform(df[altitude_columns])
-		df[target_columns] = self.scalers['target'].fit_transform(df[target_columns])
+		df[speed_columns] = self.scalers['speed'].fit_transform(df[speed_columns])
 		
 		self.fitted = True
 		return df
@@ -66,11 +66,11 @@ class FeatureEngineeringV1:
 	
 		lat_lon_columns = ['Ac_Lat', 'Ac_Lon']
 		altitude_columns = ['Ac_feet']
-		target_columns = ['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet']
+		speed_columns = ['Ac_kts']
 
 		df[lat_lon_columns] = self.scalers['lat_lon'].inverse_transform(df[lat_lon_columns])
 		df[altitude_columns] = self.scalers['altitude'].inverse_transform(df[altitude_columns])
-		df[target_columns] = self.scalers['target'].inverse_transform(df[target_columns])
+		df[speed_columns] = self.scalers['speed'].inverse_transform(df[speed_columns])
 		
 		return df
 	
