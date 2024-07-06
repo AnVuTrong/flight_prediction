@@ -33,19 +33,20 @@ class FlightVisualizer:
         random_flight_id = random.choice(flight_ids)
         flight_data = df[df['Ac_id'] == random_flight_id]
         return random_flight_id, flight_data
-
+    
     def predict_flight_path(self, flight_data_normalized):
         wind_conditions = flight_data_normalized[
             [col for col in flight_data_normalized.columns if 'wind_speed' in col or 'wind_dir' in col]
         ].values
-        other_features = flight_data_normalized[
-            ['Ac_type', 'Time_step', 'Phase']
-        ].values
-
+        
+        ac_type_columns = [col for col in flight_data_normalized.columns if col.startswith('Ac_type_')]
+        phase_columns = [col for col in flight_data_normalized.columns if col.startswith('Phase_')]
+        other_features = flight_data_normalized[ac_type_columns + phase_columns + ['Time_step']].values
+        
         # Combine all features into one tensor
         all_features = np.concatenate((wind_conditions, other_features), axis=1)
         all_features = torch.FloatTensor(all_features).unsqueeze(0).to(self.device)
-
+        
         with torch.no_grad():
             predicted_path = self.model(all_features).squeeze(0).cpu().numpy()
         return predicted_path

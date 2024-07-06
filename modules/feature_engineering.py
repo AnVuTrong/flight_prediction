@@ -17,8 +17,8 @@ class FeatureEngineeringV1:
 			'time_step' : StandardScaler()
 		}
 		self.encoders = {
-			'ac_type': OneHotEncoder(drop='first'),
-			'phase'  : OneHotEncoder(drop='first'),
+			'ac_type': OneHotEncoder(sparse_output=False),
+			'phase'  : OneHotEncoder(sparse_output=False),
 		}
 		self.fitted = False
 	
@@ -45,8 +45,14 @@ class FeatureEngineeringV1:
 		ac_type_encoded = self.encoders['ac_type'].fit_transform(df[['Ac_type']])
 		phase_encoded = self.encoders['phase'].fit_transform(df[['Phase']])
 		
+		df = pd.concat(
+			[
+				df,
+				pd.DataFrame(ac_type_encoded, columns=self.encoders['ac_type'].get_feature_names_out(['Ac_type'])),
+				pd.DataFrame(phase_encoded, columns=self.encoders['phase'].get_feature_names_out(['Phase'])),
+			], axis=1
+		)
 		df = df.drop(['Ac_type', 'Phase'], axis=1)
-		df = pd.concat([df, pd.DataFrame(ac_type_encoded), pd.DataFrame(phase_encoded)], axis=1)
 		
 		self.fitted = True
 		return df
@@ -63,6 +69,7 @@ class FeatureEngineeringV1:
 		df = self.common_preprocessing(df)
 		df = self.remove_unreasonable_time(df)
 		df = self.normalize_features(df)
+		
 		return df
 	
 	def decode_features(self, df):
@@ -74,6 +81,7 @@ class FeatureEngineeringV1:
 		speed_columns = ['Ac_kts']
 		time_step_column = ['Time_step']
 		
+		
 		df[lat_lon_columns] = self.scalers['lat_lon'].inverse_transform(df[lat_lon_columns])
 		df[altitude_columns] = self.scalers['altitude'].inverse_transform(df[altitude_columns])
 		df[speed_columns] = self.scalers['speed'].inverse_transform(df[speed_columns])
@@ -83,27 +91,30 @@ class FeatureEngineeringV1:
 	
 	def padding_features(self, df):
 		total_flights = df['Ac_id'].nunique()
-		max_time_step = df['Time_step'].max()
 		
 		wind_condition_columns = [col for col in df.columns if 'wind_speed' in col or 'wind_dir' in col]
-		other_features_columns = ['Ac_type', 'Phase', 'Time_step']
+		ac_type_columns = [col for col in df.columns if col.startswith('Ac_type_')]
+		phase_columns = [col for col in df.columns if col.startswith('Phase_')]
+		other_features_columns = ac_type_columns + phase_columns + ['Time_step']
+		
 		num_features = len(wind_condition_columns) + len(other_features_columns)
 		
-		X = np.zeros((total_flights, max_time_step, num_features))
-		y = np.zeros((total_flights, max_time_step, 4))  # For Ac_kts, Ac_Lat, Ac_Lon, Ac_feet
+		X_list = []
+		y_list = []
 		
 		ids = df['Ac_id'].unique()
-		for i, id in enumerate(ids):
+		for id in ids:
 			id_data = df[df['Ac_id'] == id]
 			wind_conditions = id_data[wind_condition_columns].values
 			other_features = id_data[other_features_columns].values
 			flight_info = id_data[['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet']].values
 			
-			X[i, :len(wind_conditions), :len(wind_condition_columns)] = wind_conditions
-			X[i, :len(other_features), len(wind_condition_columns):] = other_features
-			y[i, :len(flight_info), :] = flight_info
+			features = np.concatenate((wind_conditions, other_features), axis=1)
+			
+			X_list.append(features)
+			y_list.append(flight_info)
 		
-		return X, y
+		return X_list, y_list
 	
 	def split_train_test(self, X, y, test_size=0.2, val_size=0.25):
 		X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=test_size, random_state=42)
