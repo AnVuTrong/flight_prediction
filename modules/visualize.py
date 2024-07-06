@@ -21,8 +21,6 @@ class FlightVisualizer:
         self.fe = FeatureEngineeringV1()
 
     def load_model(self):
-        if not os.path.isfile(self.model_checkpoint_path):
-            raise FileNotFoundError(f"Checkpoint path '{self.model_checkpoint_path}' is not a valid file.")
         model = FlightLSTM.load_from_checkpoint(self.model_checkpoint_path)
         model.to(self.device)
         model.eval()
@@ -170,8 +168,8 @@ class FlightVisualizer:
 
 
 if __name__ == "__main__":
-    checkpoint_path = '../log/epoch=55-val_loss=0.00.ckpt'
-    csv_path = '../data/csv/raw.csv'
+    checkpoint_path = '../log/LSTM-epoch=33-val_loss=0.09058.ckpt'
+    data_path = '../data/csv/raw.csv'
 
-    visualizer = FlightVisualizer(checkpoint_path, csv_path)
+    visualizer = FlightVisualizer(checkpoint_path, data_path)
     visualizer.run_visualization()

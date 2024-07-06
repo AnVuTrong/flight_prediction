@@ -90,42 +90,40 @@ class FeatureEngineeringV1:
 		lat_lon_columns = ['Ac_Lat', 'Ac_Lon']
 		altitude_columns = ['Ac_feet']
 		speed_columns = ['Ac_kts']
-		time_step_column = ['Time_step']
 		
 		
 		df[lat_lon_columns] = self.scalers['lat_lon'].inverse_transform(df[lat_lon_columns])
 		df[altitude_columns] = self.scalers['altitude'].inverse_transform(df[altitude_columns])
 		df[speed_columns] = self.scalers['speed'].inverse_transform(df[speed_columns])
-		df[time_step_column] = self.scalers['time_step'].inverse_transform(df[time_step_column])
 		
 		return df
 	
 	def padding_features(self, df):
 		total_flights = df['Ac_id'].nunique()
+		max_time_step = df.groupby('Ac_id').size().max()  # Get the maximum number of time steps across all flights
 		
 		wind_condition_columns = [col for col in df.columns if 'wind_speed' in col or 'wind_dir' in col]
 		ac_type_columns = [col for col in df.columns if col.startswith('Ac_type_')]
 		phase_columns = [col for col in df.columns if col.startswith('Phase_')]
 		other_features_columns = ac_type_columns + phase_columns + ['Time_step']
-		
 		num_features = len(wind_condition_columns) + len(other_features_columns)
 		
-		X_list = []
-		y_list = []
+		# Initialize arrays to store padded features and target variables
+		X = np.zeros((total_flights, max_time_step, num_features))
+		y = np.zeros((total_flights, max_time_step, 4))  # For Ac_kts, Ac_Lat, Ac_Lon, Ac_feet
 		
 		ids = df['Ac_id'].unique()
-		for id in ids:
+		for i, id in enumerate(ids):
 			id_data = df[df['Ac_id'] == id]
 			wind_conditions = id_data[wind_condition_columns].values
 			other_features = id_data[other_features_columns].values
 			flight_info = id_data[['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet']].values
 			
-			features = np.concatenate((wind_conditions, other_features), axis=1)
-			
-			X_list.append(features)
-			y_list.append(flight_info)
+			X[i, :len(id_data), :len(wind_condition_columns)] = wind_conditions
+			X[i, :len(id_data), len(wind_condition_columns):] = other_features
+			y[i, :len(id_data), :] = flight_info
 		
-		return X_list, y_list
+		return X, y
 	
 	def split_train_test(self, X, y, test_size=0.2, val_size=0.25):
 		X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=test_size, random_state=42)
@@ -135,10 +133,10 @@ class FeatureEngineeringV1:
 	def make_tensor_dataset(self, X_train, X_val, X_test, y_train, y_val, y_test):
 		X_train = torch.FloatTensor(X_train)
 		X_val = torch.FloatTensor(X_val)
-		X_test = torch.FloatFloatTensor(X_test)
-		y_train = torch.FloatFloatTensor(y_train)
-		y_val = torch.FloatFloatTensor(y_val)
-		y_test = torch.FloatFloatTensor(y_test)
+		X_test = torch.FloatTensor(X_test)
+		y_train = torch.FloatTensor(y_train)
+		y_val = torch.FloatTensor(y_val)
+		y_test = torch.FloatTensor(y_test)
 		
 		train_dataset = torch.utils.data.TensorDataset(X_train, y_train)
 		val_dataset = torch.utils.data.TensorDataset(X_val, y_val)

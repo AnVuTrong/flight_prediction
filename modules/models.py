@@ -4,8 +4,9 @@ import torchmetrics as tm
 import lightning as pl
 from torchmetrics.regression import R2Score, MeanAbsoluteError
 
+
 class FlightLSTM(pl.LightningModule):
-	def __init__(self, input_size=39, hidden_size=300, num_layers=10, output_size=4, learning_rate=1e-4, dropout=0.1):
+	def __init__(self, input_size=42, hidden_size=300, num_layers=10, output_size=4, learning_rate=1e-4, dropout=0.1):
 		super().__init__()
 		
 		self.input_size = input_size
@@ -36,7 +37,7 @@ class FlightLSTM(pl.LightningModule):
 		# Define the metrics
 		self.mse = tm.MeanSquaredError()
 		self.mae = MeanAbsoluteError()
-		self.r2 = R2Score()
+		self.r2 = R2Score(num_outputs=self.output_size)  # Specify number of outputs
 		
 		# Set example input array for TensorBoard graph logging
 		self.example_input_array = torch.zeros((1, 6616, self.input_size))
@@ -56,13 +57,20 @@ class FlightLSTM(pl.LightningModule):
 		out = self.fc(out)
 		return out
 	
+	def _flatten(self, y_hat, y):
+		# Flatten the predictions and targets to 2D tensors
+		y_hat_flat = y_hat.view(-1, self.output_size)
+		y_flat = y.view(-1, self.output_size)
+		return y_hat_flat, y_flat
+	
 	def training_step(self, batch, batch_idx):
 		x, y = batch
 		y_hat = self(x)
-		loss = self.loss(y_hat, y)
-		mse = self.mse(y_hat, y)
-		mae = self.mae(y_hat, y)
-		r2 = self.r2(y_hat, y)
+		y_hat_flat, y_flat = self._flatten(y_hat, y)
+		loss = self.loss(y_hat_flat, y_flat)
+		mse = self.mse(y_hat_flat, y_flat)
+		mae = self.mae(y_hat_flat, y_flat)
+		r2 = self.r2(y_hat_flat, y_flat)
 		self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 		self.log('train_mse', mse, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 		self.log('train_mae', mae, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -72,10 +80,11 @@ class FlightLSTM(pl.LightningModule):
 	def validation_step(self, batch, batch_idx):
 		x, y = batch
 		y_hat = self(x)
-		loss = self.loss(y_hat, y)
-		mse = self.mse(y_hat, y)
-		mae = self.mae(y_hat, y)
-		r2 = self.r2(y_hat, y)
+		y_hat_flat, y_flat = self._flatten(y_hat, y)
+		loss = self.loss(y_hat_flat, y_flat)
+		mse = self.mse(y_hat_flat, y_flat)
+		mae = self.mae(y_hat_flat, y_flat)
+		r2 = self.r2(y_hat_flat, y_flat)
 		self.log('val_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 		self.log('val_mse', mse, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 		self.log('val_mae', mae, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -85,10 +94,11 @@ class FlightLSTM(pl.LightningModule):
 	def test_step(self, batch, batch_idx):
 		x, y = batch
 		y_hat = self(x)
-		loss = self.loss(y_hat, y)
-		mse = self.mse(y_hat, y)
-		mae = self.mae(y_hat, y)
-		r2 = self.r2(y_hat, y)
+		y_hat_flat, y_flat = self._flatten(y_hat, y)
+		loss = self.loss(y_hat_flat, y_flat)
+		mse = self.mse(y_hat_flat, y_flat)
+		mae = self.mae(y_hat_flat, y_flat)
+		r2 = self.r2(y_hat_flat, y_flat)
 		self.log('test_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 		self.log('test_mse', mse, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 		self.log('test_mae', mae, on_step=True, on_epoch=True, prog_bar=True, logger=True)
