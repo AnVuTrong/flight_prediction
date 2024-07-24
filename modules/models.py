@@ -6,8 +6,9 @@ from torchmetrics.regression import R2Score, MeanAbsoluteError
 
 
 class FlightLSTM(pl.LightningModule):
-	def __init__(self, input_size=42, hidden_size=300, num_layers=10, output_size=4, learning_rate=1e-4, dropout=0.1):
+	def __init__(self, input_size, hidden_size, num_layers, output_size, learning_rate, dropout):
 		super().__init__()
+		self.save_hyperparameters()
 		
 		self.input_size = input_size
 		self.hidden_size = hidden_size

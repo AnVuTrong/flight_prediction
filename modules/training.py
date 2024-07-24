@@ -26,7 +26,7 @@ class TrainingFlightModel:
 		self.best_model_path_lstm = None
 		self.loaded_model_lstm = None
 	
-	def training(self, input_size=42, hidden_size=300, num_layers=10, output_size=4, learning_rate=1e-4, dropout=0.1):
+	def training(self, input_size, hidden_size, num_layers, output_size, learning_rate, dropout):
 		# Create and train the LSTM model
 		model_lstm = FlightLSTM(
 			input_size=input_size,
