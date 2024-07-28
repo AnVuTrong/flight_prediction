@@ -16,7 +16,7 @@ class MSE4DLoss(nn.Module):
 
 
 class FlightLSTM(pl.LightningModule):
-	def __init__(self, input_size=42, hidden_size=300, num_layers=10, output_size=4, learning_rate=1e-4, dropout=0.1):
+	def __init__(self, input_size=44, hidden_size=350, num_layers=10, output_size=4, learning_rate=1e-4, dropout=0.2):
 		super().__init__()
 		self.save_hyperparameters()
 		self.input_size = input_size

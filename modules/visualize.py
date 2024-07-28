@@ -47,7 +47,7 @@ class FlightVisualizer:
 		
 		ac_type_columns = [col for col in flight_data_normalized.columns if col.startswith('Ac_type_')]
 		phase_columns = [col for col in flight_data_normalized.columns if col.startswith('Phase_')]
-		other_features = flight_data_normalized[ac_type_columns + phase_columns + ['Time_step']].values
+		other_features = flight_data_normalized[ac_type_columns + phase_columns + ['Time_step', 'start', 'end']].values
 		
 		# Combine all features into one tensor
 		all_features = np.concatenate((wind_conditions, other_features), axis=1)
@@ -533,11 +533,3 @@ class FlightVisualizer:
 		)
 		
 		return m
-
-
-if __name__ == "__main__":
-	checkpoint_path = '../log/LSTM-epoch=33-val_loss=0.09058.ckpt'
-	data_path = '../data/csv/raw.csv'
-	
-	visualizer = FlightVisualizer(checkpoint_path, data_path)
-	visualizer.run_visualization()

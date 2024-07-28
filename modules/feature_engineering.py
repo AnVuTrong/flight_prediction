@@ -27,6 +27,15 @@ class FeatureEngineeringV1:
 		df = df.drop_duplicates().reset_index(drop=True)
 		return df
 	
+	def add_start_end_indicators(self, df):
+		df['start'] = 0
+		df['end'] = 0
+		for ac_id in df['Ac_id'].unique():
+			indices = df[df['Ac_id'] == ac_id].index
+			df.loc[indices[0], 'start'] = 1
+			df.loc[indices[-1], 'end'] = 1
+		return df
+	
 	def normalize_features(self, df):
 		wind_speed_columns = df.columns[df.columns.str.startswith('wind_speed')]
 		wind_dir_columns = df.columns[df.columns.str.startswith('wind_dir')]
@@ -79,6 +88,7 @@ class FeatureEngineeringV1:
 		df = pd.read_csv(csv_path)
 		df = self.common_preprocessing(df)
 		df = self.remove_unreasonable_time(df)
+		df = self.add_start_end_indicators(df)
 		df = self.normalize_features(df)
 		
 		return df
@@ -105,7 +115,7 @@ class FeatureEngineeringV1:
 		wind_condition_columns = [col for col in df.columns if 'wind_speed' in col or 'wind_dir' in col]
 		ac_type_columns = [col for col in df.columns if col.startswith('Ac_type_')]
 		phase_columns = [col for col in df.columns if col.startswith('Phase_')]
-		other_features_columns = ac_type_columns + phase_columns + ['Time_step']
+		other_features_columns = ac_type_columns + phase_columns + ['Time_step', 'start', 'end']
 		num_features = len(wind_condition_columns) + len(other_features_columns)
 		
 		# Initialize arrays to store padded features and target variables
