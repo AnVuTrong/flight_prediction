@@ -5,11 +5,20 @@ import lightning as pl
 from torchmetrics.regression import R2Score, MeanAbsoluteError
 
 
+class MSE4DLoss(nn.Module):
+	def __init__(self):
+		super(MSE4DLoss, self).__init__()
+	
+	def forward(self, y_pred, y_true):
+		# Calculate MSE for each dimension
+		mse = ((y_pred - y_true) ** 2).mean(dim=1).sum()
+		return mse
+
+
 class FlightLSTM(pl.LightningModule):
-	def __init__(self, input_size, hidden_size, num_layers, output_size, learning_rate, dropout):
+	def __init__(self, input_size=42, hidden_size=300, num_layers=10, output_size=4, learning_rate=1e-4, dropout=0.1):
 		super().__init__()
 		self.save_hyperparameters()
-		
 		self.input_size = input_size
 		self.hidden_size = hidden_size
 		self.num_layers = num_layers
@@ -32,13 +41,13 @@ class FlightLSTM(pl.LightningModule):
 		# Define ReLU activation function
 		self.relu = nn.ReLU()
 		
-		# Define the loss function
-		self.loss = nn.MSELoss()  # Use MSELoss for regression
+		# Define the custom 4D MSE loss function
+		self.loss = MSE4DLoss()
 		
 		# Define the metrics
 		self.mse = tm.MeanSquaredError()
 		self.mae = MeanAbsoluteError()
-		self.r2 = R2Score(num_outputs=self.output_size)  # Specify number of outputs
+		self.r2 = R2Score(num_outputs=self.output_size)
 		
 		# Set example input array for TensorBoard graph logging
 		self.example_input_array = torch.zeros((1, 6616, self.input_size))
