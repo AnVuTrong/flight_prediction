@@ -84,12 +84,19 @@ class FeatureEngineeringV1:
 		cleaned_df.reset_index(drop=True)
 		return cleaned_df
 	
+	def manual_remove_error_data(self, df, lst_ids):
+		cleaned_df = df[~df['Ac_id'].isin(lst_ids)]
+		cleaned_df = cleaned_df.reset_index(drop=True)
+		return cleaned_df
+	
 	def process_data(self, csv_path):
 		df = pd.read_csv(csv_path)
 		df = self.common_preprocessing(df)
 		df = self.remove_unreasonable_time(df)
 		df = self.add_start_end_indicators(df)
 		df = self.normalize_features(df)
+		error_ids = ['R6-VJ122-03', 'R6-VN246-30', 'R6-BL6046-27', 'R6-VN248-22-11', 'R6-BL6046-25']
+		df = self.manual_remove_error_data(df, error_ids)
 		
 		return df
 	

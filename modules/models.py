@@ -38,7 +38,7 @@ class FlightLSTM(pl.LightningModule):
 		# Define a fully connected layer for each time step
 		self.fc = nn.Linear(self.hidden_size, self.output_size)
 		
-		# Define ReLU activation function
+		# Define activation function
 		self.relu = nn.ReLU()
 		
 		# Define the custom 4D MSE loss function
@@ -53,14 +53,15 @@ class FlightLSTM(pl.LightningModule):
 		self.example_input_array = torch.zeros((1, 6616, self.input_size))
 	
 	def forward(self, x):
-		# Initialize hidden state with zeros
-		h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
-		c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+		# # Initialize hidden state with zeros
+		# h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+		# c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
 		
 		# Forward propagate LSTM
-		out, _ = self.lstm(x, (h0, c0))
+		# out, _ = self.lstm(x, (h0, c0))
+		out, _ = self.lstm(x)
 		
-		# Apply ReLU activation function
+		# Apply activation function
 		out = self.relu(out)
 		
 		# Apply fully connected layer to each time step

@@ -533,3 +533,307 @@ class FlightVisualizer:
 		)
 		
 		return m
+
+
+class RealFlightVisualizer:
+	def __init__(self, csv_path):
+		self.data_path = csv_path
+		self.plotly_template = 'plotly'
+	
+	def print_flight_ids(self):
+		df = pd.read_csv(self.data_path)
+		flight_ids = df['Ac_id'].unique()
+		for i, ids in enumerate(flight_ids):
+			print(f"Index: {i}")
+			print(f"Flight ID: {ids}")
+		return flight_ids
+	
+	def get_random_flight(self, df):
+		flight_ids = df['Ac_id'].unique()
+		random_flight_id = random.choice(flight_ids)
+		flight_data = df[df['Ac_id'] == random_flight_id]
+		return random_flight_id, flight_data
+	
+	def visualize_flight_path(self, df, random_flight_id):
+		actual_flight_data = df[df['Ac_id'] == random_flight_id]
+		fig = plt.figure(figsize=(10, 20))
+		ax = fig.add_subplot(111, projection='3d')
+		
+		# Actual path
+		ax.plot(actual_flight_data['Ac_Lon'], actual_flight_data['Ac_Lat'], actual_flight_data['Ac_feet'],
+		        label='Flight Path')
+		
+		# Add points for the takeoff and landing
+		ax.scatter(actual_flight_data['Ac_Lon'].iloc[0], actual_flight_data['Ac_Lat'].iloc[0],
+		           actual_flight_data['Ac_feet'].iloc[0], color='green', label='Takeoff')
+		ax.scatter(actual_flight_data['Ac_Lon'].iloc[-1], actual_flight_data['Ac_Lat'].iloc[-1],
+		           actual_flight_data['Ac_feet'].iloc[-1], color='red', label='Landing')
+		
+		ax.set_xlabel('Longitude')
+		ax.set_ylabel('Latitude')
+		ax.set_zlabel('Altitude (feet)')
+		ax.legend()
+		plt.title('Flight Path Visualization')
+		plt.show()
+	
+	def visualize_flight_path_cartopy(self, df, random_flight_id):
+		actual_flight_data = df[df['Ac_id'] == random_flight_id]
+		
+		fig = plt.figure(figsize=(10, 15))
+		ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
+		
+		# Plot the actual flight path
+		ax.plot(
+			actual_flight_data['Ac_Lon'],
+			actual_flight_data['Ac_Lat'], 'b-',
+			label='Flight Path',
+			transform=ccrs.Geodetic(),
+		)
+		
+		# Plot takeoff and landing points
+		ax.plot(
+			actual_flight_data['Ac_Lon'].iloc[0],
+			actual_flight_data['Ac_Lat'].iloc[0], 'go',
+			label='Takeoff',
+			transform=ccrs.Geodetic()
+		)
+		ax.plot(
+			actual_flight_data['Ac_Lon'].iloc[-1],
+			actual_flight_data['Ac_Lat'].iloc[-1], 'ro',
+			label='Landing', transform=ccrs.Geodetic()
+		)
+		
+		# Add coastlines and borders
+		ax.coastlines()
+		ax.add_feature(cfeature.BORDERS)
+		
+		ax.gridlines(draw_labels=True)
+		ax.set_title('Flight Path Visualization using Cartopy')
+		plt.legend()
+		plt.show()
+	
+	def visualize_flight_path_plotly(self, df, random_flight_id):
+		actual_flight_data = df[df['Ac_id'] == random_flight_id]
+		
+		# Create 3D plot
+		fig = make_subplots(
+			rows=1, cols=1,
+			specs=[[{'type': 'scatter3d'}]]
+		)
+		
+		# Actual path
+		actual_trace = go.Scatter3d(
+			x=actual_flight_data['Ac_Lon'],
+			y=actual_flight_data['Ac_Lat'],
+			z=actual_flight_data['Ac_feet'],
+			mode='lines',
+			name='Flight Path'
+		)
+		
+		# Add points for the takeoff and landing
+		takeoff_trace = go.Scatter3d(
+			x=[actual_flight_data['Ac_Lon'].iloc[0]],
+			y=[actual_flight_data['Ac_Lat'].iloc[0]],
+			z=[actual_flight_data['Ac_feet'].iloc[0]],
+			mode='markers',
+			marker=dict(size=10, color='green'),
+			name='Takeoff'
+		)
+		landing_trace = go.Scatter3d(
+			x=[actual_flight_data['Ac_Lon'].iloc[-1]],
+			y=[actual_flight_data['Ac_Lat'].iloc[-1]],
+			z=[actual_flight_data['Ac_feet'].iloc[-1]],
+			mode='markers',
+			marker=dict(size=10, color='red'),
+			name='Landing'
+		)
+		
+		fig.add_trace(actual_trace, row=1, col=1)
+		fig.add_trace(takeoff_trace, row=1, col=1)
+		fig.add_trace(landing_trace, row=1, col=1)
+		
+		fig.update_layout(
+			scene=dict(
+				xaxis_title='Longitude',
+				yaxis_title='Latitude',
+				zaxis_title='Altitude (feet)'
+			),
+			title='Flight Path Visualization with Plotly',
+			template=self.plotly_template,
+		
+		)
+		fig.show()
+	
+	def visualize_flight_path_scattergeo(self, df, random_flight_id):
+		actual_flight_data = df[df['Ac_id'] == random_flight_id]
+		
+		# Create the plot
+		fig = go.Figure()
+		
+		# Actual path
+		actual_trace = go.Scattergeo(
+			lon=actual_flight_data['Ac_Lon'],
+			lat=actual_flight_data['Ac_Lat'],
+			mode='lines',
+			name='Flight Path'
+		)
+		
+		# Add points for the takeoff and landing
+		takeoff_trace = go.Scattergeo(
+			lon=[actual_flight_data['Ac_Lon'].iloc[0]],
+			lat=[actual_flight_data['Ac_Lat'].iloc[0]],
+			mode='markers',
+			marker=dict(size=10, color='green'),
+			name='Takeoff'
+		)
+		landing_trace = go.Scattergeo(
+			lon=[actual_flight_data['Ac_Lon'].iloc[-1]],
+			lat=[actual_flight_data['Ac_Lat'].iloc[-1]],
+			mode='markers',
+			marker=dict(size=10, color='red'),
+			name = 'Landing'
+		)
+		
+		fig.add_trace(actual_trace)
+		fig.add_trace(takeoff_trace)
+		fig.add_trace(landing_trace)
+		
+		fig.update_layout(
+			geo=dict(
+				projection_type='natural earth',
+				showland=True,
+				landcolor='rgb(217, 217, 217)',
+				subunitwidth=1,
+				countrywidth=1,
+				subunitcolor="rgb(255, 255, 255)",
+				countrycolor="rgb(255, 255, 255)"
+			),
+			title='Flight Path Visualization with Plotly',
+			template=self.plotly_template,
+		)
+		
+		fig.show()
+	
+	def visualize_flight_path_pydeck(self, df, random_flight_id):
+		actual_flight_data = df[df['Ac_id'] == random_flight_id]
+		
+		# Prepare actual path data
+		actual_path_data = actual_flight_data[['Ac_Lon', 'Ac_Lat', 'Ac_feet']].values.tolist()
+		actual_path_data = [{"path": actual_path_data}]
+		
+		# Actual path layer
+		actual_path_layer = pdk.Layer(
+			'PathLayer',
+			actual_path_data,
+			get_path='path',
+			get_color=[0, 0, 255],
+			width_scale=20,
+			width_min_pixels=2,
+			get_width=5,
+			pickable=True
+		)
+		
+		# Start point
+		start_point = pdk.Layer(
+			'ScatterplotLayer',
+			data=[{
+				'Lon': actual_flight_data['Ac_Lon'].iloc[0],
+				'Lat': actual_flight_data['Ac_Lat'].iloc[0],
+				'Alt': actual_flight_data['Ac_feet'].iloc[0]
+			}],
+			get_position='[Lon, Lat, Alt]',
+			get_color=[0, 255, 0],
+			get_radius=10000,
+		)
+		
+		# End point
+		end_point = pdk.Layer(
+			'ScatterplotLayer',
+			data=[{
+				'Lon': actual_flight_data['Ac_Lon'].iloc[-1],
+				'Lat': actual_flight_data['Ac_Lat'].iloc[-1],
+				'Alt': actual_flight_data['Ac_feet'].iloc[-1]
+			}],
+			get_position='[Lon, Lat, Alt]',
+			get_color=[255, 0, 0],
+			get_radius=10000,
+		)
+		
+		# View
+		view_state = pdk.ViewState(
+			latitude=actual_flight_data['Ac_Lat'].mean(),
+			longitude=actual_flight_data['Ac_Lon'].mean(),
+			zoom=5,
+			pitch=45,
+			bearing=0
+		)
+		
+		# Deck
+		r = pdk.Deck(
+			layers=[actual_path_layer, start_point, end_point],
+			initial_view_state=view_state,
+			tooltip={"text": "{path}"}
+		)
+		
+		r.to_html("../output/actual/real_flight_path_pydeck.html")
+		print("3D Flight path visualization saved as real_flight_path_pydeck.html")
+	
+	def visualize_flight_path_folium(self, actual_flight_data):
+		# Create map
+		m = folium.Map(location=[actual_flight_data['Ac_Lat'].mean(), actual_flight_data['Ac_Lon'].mean()],
+		               zoom_start=6)
+		
+		# Actual path
+		actual_coords = actual_flight_data[['Ac_Lat', 'Ac_Lon']].values
+		folium.PolyLine(actual_coords, color='blue', weight=2.5, opacity=1).add_to(m)
+		
+		# Add markers for start and end points
+		folium.Marker(actual_coords[0], tooltip='Take off', icon=folium.Icon(color='green')).add_to(m)
+		folium.Marker(actual_coords[-1], tooltip='Landing', icon=folium.Icon(color='red')).add_to(m)
+		
+		return m
+	
+	def save_folium_file(self, df, flight_id, name):
+		m = self.visualize_flight_path_folium(
+			df[df['Ac_id'] == flight_id]
+		)
+		m.save(f'../output/actual/{name}.html')
+		print(f"Map saved as {name}.html")
+	
+	def print_actual_path(self, actual_flight_data):
+		actual_path_df = actual_flight_data[['Ac_kts', 'Ac_Lat', 'Ac_Lon', 'Ac_feet']]
+		print(f"Actual Path of flight {actual_flight_data['Ac_id'].iloc[0]}:")
+		# print(actual_path_df)
+	
+	def run_visualization(self, id=None, rand=False):
+		df = pd.read_csv(self.data_path)
+		if rand:
+			flight_id, _ = self.get_random_flight(df)
+		else:
+			flight_id = id
+		
+		self.print_actual_path(df[df['Ac_id'] == flight_id])
+		
+		self.visualize_flight_path(
+			df, flight_id
+		)
+		# self.visualize_flight_path_cartopy(
+		# 	df, flight_id
+		# )
+		# self.visualize_flight_path_plotly(
+		# 	df, flight_id
+		# )
+		# self.visualize_flight_path_scattergeo(
+		# 	df, flight_id
+		# )
+		# self.visualize_flight_path_pydeck(
+		# 	df, flight_id
+		# )
+		# m = self.visualize_flight_path_folium(
+		# 	df[df['Ac_id'] == flight_id]
+		# )
+		# self.save_folium_file(
+		# 	df, flight_id, 'real_flight_path_map'
+		# )
+		
+		# return m
